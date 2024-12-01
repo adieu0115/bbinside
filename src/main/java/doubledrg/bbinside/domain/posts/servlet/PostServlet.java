@@ -1,10 +1,7 @@
 package doubledrg.bbinside.domain.posts.servlet;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import doubledrg.bbinside.domain.posts.dao.PostDao;
 import doubledrg.bbinside.domain.posts.dto.PostDetailDto;
-import doubledrg.bbinside.domain.posts.dto.PostLimitOffset;
 import doubledrg.bbinside.domain.posts.service.PostService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -28,18 +25,20 @@ public class PostServlet extends HttpServlet
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
     {
         String pathInfo = request.getPathInfo();
-        String postId = request.getParameter("id");
 
         try
         {
-            if (postId == null)
+            if (pathInfo == null || "/".equals(pathInfo))
             {
-                handleShowRecentPosts(readRequestBody(request), response);
+                handleShowRecentPosts(request, response);
+            }
+            else if ("/user".equals(pathInfo))
+            {
+                handlePostsWithUserId(request, response);
             }
             else
             {
-                long id = Long.parseLong(postId);
-                handlePostsWithUserId(id, response);
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
         }
         catch (Exception e)
@@ -48,21 +47,24 @@ public class PostServlet extends HttpServlet
         }
     }
 
-    private void handlePostsWithUserId(Long id, HttpServletResponse response) throws SQLException, ClassNotFoundException, IOException
+    private void handlePostsWithUserId(HttpServletRequest request, HttpServletResponse response) throws SQLException, ClassNotFoundException, IOException
     {
-        List<PostDetailDto> posts = postService.showPostsWithUserId(id);
-        sendPosts(response, posts.toString());
+        long userId = Long.parseLong(request.getParameter("id"));
+        long limit = Long.parseLong(request.getParameter("limit"));
+        long offset = Long.parseLong(request.getParameter("offset"));
+        List<PostDetailDto> posts = postService.showPostsWithUserId(userId, limit, offset);
+        sendPosts(response, posts);
     }
 
-    private void handleShowRecentPosts(String requestBody, HttpServletResponse response) throws IOException, SQLException, ClassNotFoundException
+    private void handleShowRecentPosts(HttpServletRequest request, HttpServletResponse response) throws IOException, SQLException, ClassNotFoundException
     {
-        PostLimitOffset range = objectMapper.readValue(requestBody, PostLimitOffset.class);
-        List<PostDetailDto> posts = postService.showRecentPosts(range.getLimit(), range.getOffset());
-
-        sendPosts(response, posts.toString());
+        long limit = Long.parseLong(request.getParameter("limit"));
+        long offset = Long.parseLong(request.getParameter("offset"));
+        List<PostDetailDto> posts = postService.showRecentPosts(limit, offset);
+        sendPosts(response, posts);
     }
 
-    private void sendPosts(HttpServletResponse response, String posts) throws IOException
+    private void sendPosts(HttpServletResponse response, List<PostDetailDto> posts) throws IOException
     {
         response.setStatus(HttpServletResponse.SC_OK);
         objectMapper.writeValue(response.getWriter(),

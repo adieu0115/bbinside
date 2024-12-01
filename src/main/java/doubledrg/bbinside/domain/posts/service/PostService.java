@@ -21,10 +21,8 @@ public class PostService
         return postDao.findRecentPosts(limit, offset);
     }
 
-    public List<PostDetailDto> showPostsWithUserId(Long userId) throws SQLException, ClassNotFoundException
+    public List<PostDetailDto> showPostsWithUserId(Long userId, Long limit, Long offset) throws SQLException, ClassNotFoundException
     {
-        Long limit = 15L;
-        Long offset = 0L;
         return postDao.findByUserId(userId, limit, offset);
     }
 

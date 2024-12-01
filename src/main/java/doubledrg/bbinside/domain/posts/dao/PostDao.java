@@ -87,9 +87,11 @@ public class PostDao
     public List<PostDetailDto> findByUserId(Long id, Long limit, Long offset) throws SQLException, ClassNotFoundException
     {
         final String sql =
-                "SELECT *" +
-                        " FROM POSTS" +
-                        " WHERE USER_ID= ?" +
+                "SELECT P.id, P.title, P.content, P.user_id, P.created_at, U.username" +
+                        " FROM POSTS AS P,USERS AS U" +
+                        " WHERE P.USER_ID=U.ID" +
+                        " AND P.USER_ID = ?" +
+                        " ORDER BY CREATED_AT DESC" +
                         " LIMIT ? OFFSET ?";
         List<PostDetailDto> posts = new ArrayList<>();
 
@@ -105,6 +107,7 @@ public class PostDao
                 {
                     Long postId = rs.getLong("ID");
                     String title = rs.getString("TITLE");
+                    String username = rs.getString("USERNAME");
                     String context = rs.getString("CONTENT");
                     Long userId = rs.getLong("USER_ID");
                     Timestamp createdAt = rs.getTimestamp("CREATED_AT");
@@ -112,6 +115,7 @@ public class PostDao
                     PostDetailDto post = new PostDetailDto();
                     post.setId(postId);
                     post.setTitle(title);
+                    post.setUsername(username);
                     post.setContent(context);
                     post.setUserId(userId);
                     post.setCreatedAt(createdAt);
