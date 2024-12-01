@@ -52,7 +52,7 @@ public class PostServlet extends HttpServlet
         long userId = Long.parseLong(request.getParameter("id"));
         long limit = Long.parseLong(request.getParameter("limit"));
         long offset = Long.parseLong(request.getParameter("offset"));
-        List<PostDetailDto> posts = postService.showPostsWithUserId(userId, limit, offset);
+        List<PostDetailDto> posts = postService.showRecentPostListWithUserId(userId, limit, offset);
         sendPosts(response, posts);
     }
 
@@ -60,7 +60,7 @@ public class PostServlet extends HttpServlet
     {
         long limit = Long.parseLong(request.getParameter("limit"));
         long offset = Long.parseLong(request.getParameter("offset"));
-        List<PostDetailDto> posts = postService.showRecentPosts(limit, offset);
+        List<PostDetailDto> posts = postService.showRecentPostList(limit, offset);
         sendPosts(response, posts);
     }
 

@@ -1,5 +1,6 @@
 package doubledrg.bbinside.domain.posts.dao;
 
+import doubledrg.bbinside.config.ConnectionMaker;
 import doubledrg.bbinside.domain.posts.Post;
 import doubledrg.bbinside.domain.posts.dto.PostDetailDto;
 import doubledrg.bbinside.domain.posts.dto.PostSaveDto;
@@ -10,15 +11,7 @@ import java.util.List;
 
 public class PostDao
 {
-    private Connection makeConnection() throws ClassNotFoundException, SQLException
-    {
-        final String url = "jdbc:mysql://localhost:3306/bbinside";
-        final String username = "root";
-        final String password = "endyd132!!";
-
-        Class.forName("com.mysql.cj.jdbc.Driver");
-        return DriverManager.getConnection(url, username, password);
-    }
+    private final ConnectionMaker connectionMaker = new ConnectionMaker();
 
     public Long save(PostSaveDto dto) throws SQLException, ClassNotFoundException
     {
@@ -26,8 +19,8 @@ public class PostDao
                 "INSERT INTO POSTS(TITLE,CONTENT,USER_ID,CREATED_AT)" +
                         " VALUES(?,?,?,?)";
 
-        try (Connection conn = makeConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);)
+        try (Connection conn = connectionMaker.makeConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS))
         {
             pstmt.setString(1, dto.getTitle());
             pstmt.setString(2, dto.getContent());
@@ -43,17 +36,60 @@ public class PostDao
         }
     }
 
-    public List<PostDetailDto> findRecentPosts(Long limit, Long offset) throws SQLException, ClassNotFoundException
+    public PostDetailDto findByPostId(Long id) throws SQLException, ClassNotFoundException
     {
         final String sql =
-                "SELECT P.id, P.title, P.content, P.user_id, P.created_at, U.username" +
+                "SELECT" +
+                        " P.id," +
+                        " P.title," +
+                        " P.content," +
+                        " P.user_id," +
+                        " P.created_at," +
+                        " U.username" +
+                        " FROM POSTS AS P,USERS AS U" +
+                        " WHERE P.USER_ID=U.ID" +
+                        " AND P.ID = ?";
+
+        try (Connection conn = connectionMaker.makeConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);)
+        {
+            pstmt.setLong(1, id);
+            try (ResultSet rs = pstmt.executeQuery())
+            {
+                PostDetailDto post = null;
+                if (rs.next())
+                {
+                    Long postId = rs.getLong("ID");
+                    String title = rs.getString("TITLE");
+                    String content = rs.getString("CONTENT");
+                    Long userId = rs.getLong("USER_ID");
+                    Timestamp createdAt = rs.getTimestamp("CREATED_AT");
+                    String username = rs.getString("USERNAME");
+
+                    post = new PostDetailDto(postId, title, username, content, userId, createdAt);
+                }
+                return post;
+            }
+        }
+    }
+
+    public List<PostDetailDto> findRecentPostList(Long limit, Long offset) throws SQLException, ClassNotFoundException
+    {
+        final String sql =
+                "SELECT" +
+                        " P.id," +
+                        " P.title," +
+                        " P.content," +
+                        " P.user_id," +
+                        " P.created_at," +
+                        " U.username" +
                         " FROM POSTS AS P,USERS AS U" +
                         " WHERE P.USER_ID=U.ID" +
                         " ORDER BY CREATED_AT DESC" +
                         " LIMIT ? OFFSET ?";
         List<PostDetailDto> posts = new ArrayList<>();
 
-        try (Connection conn = makeConnection();
+        try (Connection conn = connectionMaker.makeConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);)
         {
             pstmt.setLong(1, limit);
@@ -64,30 +100,28 @@ public class PostDao
                 {
                     Long postId = rs.getLong("ID");
                     String title = rs.getString("TITLE");
-                    String context = rs.getString("CONTENT");
+                    String content = rs.getString("CONTENT");
                     Long userId = rs.getLong("USER_ID");
                     Timestamp createdAt = rs.getTimestamp("CREATED_AT");
                     String username = rs.getString("USERNAME");
 
-                    PostDetailDto post = new PostDetailDto();
-                    post.setId(postId);
-                    post.setTitle(title);
-                    post.setUsername(username);
-                    post.setContent(context);
-                    post.setUserId(userId);
-                    post.setCreatedAt(createdAt);
-
-                    posts.add(post);
+                    posts.add(new PostDetailDto(postId, title, username, content, userId, createdAt));
                 }
             }
         }
         return posts;
     }
 
-    public List<PostDetailDto> findByUserId(Long id, Long limit, Long offset) throws SQLException, ClassNotFoundException
+    public List<PostDetailDto> findRecentPostListWithUserId(Long id, Long limit, Long offset) throws SQLException, ClassNotFoundException
     {
         final String sql =
-                "SELECT P.id, P.title, P.content, P.user_id, P.created_at, U.username" +
+                "SELECT" +
+                        " P.id," +
+                        " P.title," +
+                        " P.content," +
+                        " P.user_id," +
+                        " P.created_at," +
+                        " U.username" +
                         " FROM POSTS AS P,USERS AS U" +
                         " WHERE P.USER_ID=U.ID" +
                         " AND P.USER_ID = ?" +
@@ -95,7 +129,7 @@ public class PostDao
                         " LIMIT ? OFFSET ?";
         List<PostDetailDto> posts = new ArrayList<>();
 
-        try (Connection conn = makeConnection();
+        try (Connection conn = connectionMaker.makeConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);)
         {
             pstmt.setLong(1, id);
@@ -108,34 +142,27 @@ public class PostDao
                     Long postId = rs.getLong("ID");
                     String title = rs.getString("TITLE");
                     String username = rs.getString("USERNAME");
-                    String context = rs.getString("CONTENT");
+                    String content = rs.getString("CONTENT");
                     Long userId = rs.getLong("USER_ID");
                     Timestamp createdAt = rs.getTimestamp("CREATED_AT");
 
-                    PostDetailDto post = new PostDetailDto();
-                    post.setId(postId);
-                    post.setTitle(title);
-                    post.setUsername(username);
-                    post.setContent(context);
-                    post.setUserId(userId);
-                    post.setCreatedAt(createdAt);
-
-                    posts.add(post);
+                    posts.add(new PostDetailDto(postId, title, username, content, userId, createdAt));
                 }
             }
         }
         return posts;
     }
 
-    public List<Post> findByTitle(String inputTitle) throws SQLException, ClassNotFoundException
+    public List<Post> findRecentPostListWithTitle(String inputTitle) throws SQLException, ClassNotFoundException
     {
         final String sql =
                 "SELECT *" +
                         " FROM POSTS" +
-                        " WHERE TITLE=?";
+                        " WHERE TITLE=?" +
+                        " ORDER BY CREATED_AT DESC";
         List<Post> posts = new ArrayList<>();
 
-        try (Connection conn = makeConnection();
+        try (Connection conn = connectionMaker.makeConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);)
         {
             pstmt.setString(1, inputTitle);
@@ -161,39 +188,5 @@ public class PostDao
             }
         }
         return posts;
-    }
-
-    //Test
-    public static void main(String[] args) throws SQLException, ClassNotFoundException
-    {
-        PostDao postDao = new PostDao();
-        Long testUserId = 10L;
-
-//        for (int i = 0; i < 10; i++)
-//        {
-//            String title = postDao.createRandomString(10);
-//            String content = postDao.createRandomString(10);
-//            Timestamp createdAt = new Timestamp(System.currentTimeMillis());
-//
-//            PostSaveDto dto = new PostSaveDto(title, content, testUserId, createdAt.toLocalDateTime());
-//            postDao.save(dto);
-//        }
-
-//        List<PostDetailDto> posts = postDao.findByUserId(15L, 5L, 0L);
-
-        List<PostDetailDto> posts = postDao.findRecentPosts(15L, 0L);
-        System.out.println(posts);
-
-    }
-
-    public String createRandomString(int length)
-    {
-        String seed = " 123456789qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++)
-        {
-            sb.append(seed.charAt((int) (Math.random() * (seed.length() - 1))));
-        }
-        return sb.toString();
     }
 }
